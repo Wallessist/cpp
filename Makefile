@@ -1,30 +1,56 @@
-# The very simple build which just compiles all the source files in current
-# directory every time.
+# Makefile for lightweight cpp project.
 
-heads := $(wildcard *.h)
-sources := $(wildcard *.cpp)
-objects := $(patsubst %.cpp,%.o,$(sources))
-libs := -lncurses
+#	Project directory structrure.
+SRC_DIR = .
+INC_DIR = .
+
+# Directory(s) should be generate by make.
+OBJ_DIR = .obj
+$(shell mkdir -p $(OBJ_DIR))
+
+INCS := $(wildcard $(INC_DIR)/*.h)
+SRCS := $(wildcard $(SRC_DIR)/*.cpp)
+OBJS := $(SRCS:$(SRC_DIR)%.cpp=$(OBJ_DIR)%.o)
+
 MAIN := main
 
-$(MAIN) : $(objects)
-	g++ $(libs) -o $(MAIN) $(objects)
+DEBUGSYM = -g
+LIBS := -lncurses
+CXXFLAGS += $(DEBUGSYM)
+# Debug setting.
+#ifeq ($(DEBUG), 1)
+#		CXXFLAGS += $(DEBUGSYM)
+#endif
 
-$(objects) : $(heads)
 
-run : $(MAIN)
+all: $(MAIN)
+
+run: $(MAIN)
 	./$(MAIN)
 
-.PHONY : cleanobj cleanall gdb bear
+$(MAIN) : $(OBJS)
+	$(CXX) $(CXXFLAGS) $(LIBS) $^ -o $@
 
-bear :
-	bear -- make
+# Spawn the corresponding .o and .d files for every .cpp file.
+$(OBJ_DIR)/%.o : $(SRC_DIR)/%.cpp
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -MMD -MP -c $< -o $@
 
-cleanobj :
-	rm $(objects)
 
-cleanall : cleanobj
+.PHONY: cleanobj clean gdb bear debug parallelism
+
+bear:
+	bear -- make -j$(nproc)
+
+cleanobj:
+	rm -rf $(OBJ_DIR)
+
+clean: cleanobj
 	rm $(MAIN)
 
-gdb :
+gdb:
 	gdb $(MAIN)
+
+parallelism:
+	make -j$(nproc)
+
+-include ${OBJS:.o=.d}

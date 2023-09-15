@@ -1,0 +1,4 @@
+main
+.clang-format
+.dir-locals.el
+.obj/
