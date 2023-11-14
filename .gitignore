@@ -8,4 +8,4 @@ build/
 compile_commands.json
 
 # clangd cache directory.
-.cache
+.cache/
