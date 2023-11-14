@@ -1,56 +1,133 @@
-# Makefile for lightweight cpp project.
+###############################################################################
+#                             Directory structure.                            #
+###############################################################################
 
-#	Project directory structrure.
-SRC_DIR = .
-INC_DIR = .
+# Store source files.
+DIR_SRC = src
 
-# Directory(s) should be generate by make.
-OBJ_DIR = .obj
-$(shell mkdir -p $(OBJ_DIR))
+# Store head files.
+DIR_INC = include
 
-INCS := $(wildcard $(INC_DIR)/*.h)
-SRCS := $(wildcard $(SRC_DIR)/*.cpp)
-OBJS := $(SRCS:$(SRC_DIR)%.cpp=$(OBJ_DIR)%.o)
+# Store test files.
+DIR_TEST = test
 
-MAIN := main
+# Store example files.
+DIR_EXAMPLE = example
 
-DEBUGSYM = -g
-LIBS := -lncurses
-CXXFLAGS += $(DEBUGSYM)
-# Debug setting.
-#ifeq ($(DEBUG), 1)
-#		CXXFLAGS += $(DEBUGSYM)
-#endif
+# Place to store building files.
+DIR_BUILD = build
+
+# Debug.
+DIR_DEBUG = $(DIR_BUILD)/debug
+
+# Release.
+DIR_RELEASE = $(DIR_BUILD)/release
+
+# Object files' directory.
+DIR_OBJ = obj
 
 
-all: $(MAIN)
+###############################################################################
+#                                Source files                                 #
+###############################################################################
 
-run: $(MAIN)
-	./$(MAIN)
+INCS := $(wildcard $(DIR_INC)/*.h)
+SRCS := $(wildcard $(DIR_SRC)/*.cpp)
+OBJS :=
 
-$(MAIN) : $(OBJS)
-	$(CXX) $(CXXFLAGS) $(LIBS) $^ -o $@
+# Target file.
+TARGET = debug
+
+
+###############################################################################
+#                                Compile flags.                               #
+###############################################################################
+
+# Setting flags.
+CXX := $(shell which g++)
+CXXFLAGS += -std=c++17
+CPPFLAGS += -MMD -MP
+
+
+###############################################################################
+#                                   Options.                                  #
+###############################################################################
+
+# Build mode as one of [debug=default, release], controls which build.
+RELEASE ?= off
+
+ifeq ($(RELEASE), off)
+	CXXFLAGS += -g
+	DIR_OBJ := $(DIR_DEBUG)/$(DIR_OBJ)
+	TARGET := $(DIR_DEBUG)/debug
+else
+	CXXFLAGS += -O3
+	DIR_OBJ := $(DIR_RELEASE)/$(DIR_OBJ)
+	TARGET := $(DIR_RELEASE)/release
+endif
+OBJS := $(SRCS:$(DIR_SRC)%.cpp=$(DIR_OBJ)%.o)
+
+###############################################################################
+#                           Project building rules.                           #
+###############################################################################
+
+# Makefile enterpoint.
+all: directory $(TARGET)
+
+# Generating final target.
+$(TARGET): $(OBJS)
+	$(CXX) $(CXXFLAGS) $< -o $@
 
 # Spawn the corresponding .o and .d files for every .cpp file.
-$(OBJ_DIR)/%.o : $(SRC_DIR)/%.cpp
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -MMD -MP -c $< -o $@
+$(DIR_OBJ)/%.o: $(DIR_SRC)/%.cpp
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
 
-
-.PHONY: cleanobj clean gdb bear debug parallelism
-
-bear:
-	bear -- make -j$(nproc)
-
-cleanobj:
-	rm -rf $(OBJ_DIR)
-
-clean: cleanobj
-	rm $(MAIN)
-
-gdb:
-	gdb $(MAIN)
-
-parallelism:
-	make -j$(nproc)
+# Generating build directories.
+directory:
+	mkdir -p $(DIR_OBJ)
 
 -include ${OBJS:.o=.d}
+
+
+###############################################################################
+#                                Build commands.                              #
+###############################################################################
+
+.PHONY: debug release clean
+
+debug:
+	@$(MAKE)
+
+release:
+	@$(MAKE) RELEASE=on
+
+clean:
+	rm -rf build
+
+
+###############################################################################
+#                                User commands.                               #
+###############################################################################
+
+# Build and run.
+run:
+	$(MAKE) debug
+	./$(TARGET)
+
+gdb:
+	$(MAKE) debug
+	gdb $(TARGET)
+
+# Generating {.clang-format} file.
+Gen-clangFormat:
+	clang-format -style=google -dump-config > .clang-format
+
+# Generating {compile-command.json} file.
+bear:
+	bear -- $(MAKE) -j$(nproc) debug
+
+project:
+	mkdir -p $(DIR_SRC) $(DIR_INC)
+	$(MAKE) Gen-clangFormat
+
+

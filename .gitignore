@@ -1,4 +1,11 @@
-main
-.clang-format
+# Emacs projectile setting file.
 .dir-locals.el
-.obj/
+
+# Build directory.
+build/
+
+# compile_commands.
+compile_commands.json
+
+# clangd cache directory.
+.cache
