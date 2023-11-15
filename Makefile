@@ -85,7 +85,7 @@ all: directory $(TARGET)
 
 # Generating final target.
 $(TARGET): $(OBJS)
-	$(CXX) $(CXXFLAGS) $< -o $@
+	$(CXX) $(CXXFLAGS) $^ -o $@
 
 # Spawn the corresponding .o and .d files for every .cpp file.
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
