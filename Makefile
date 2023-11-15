@@ -1,42 +1,54 @@
+# Note:
+# [foo = value] means foo will has different values under different options and
+# 	should use with caution.
+# [bar := value] means bar is constant and is not affect by different options.
+# [cei ?= value] defines cei as an option with default value and its value can
+# 	be changed with command: make cei=othervalue.
+
+
 ###############################################################################
 #                             Directory structure.                            #
 ###############################################################################
 
-# Store source files.
-DIR_SRC = src
+# Suffix meaning.
+# _STR : normal string object, used to construct object of other type.
+# _DIR : directory object.
 
-# Store head files.
-DIR_INC = include
+DEBUG_STR := debug
+RELEASE_STR := release
+OBJ_STR := obj
 
-# Store test files.
-DIR_TEST = test
+TARGET_STR = $(DEBUG_STR)
 
-# Store example files.
-DIR_EXAMPLE = example
+# Source directory.
+SRC_DIR := src
+# Include directory.
+INC_DIR := include
+# Test direcotry.
+TEST_DIR := test
+# Example directory.
+EXAMPLE_DIR := example
+# Build directory.
+BUILD_DIR := build
+# Debug directory.
+DEBUG_DIR := $(BUILD_DIR)/$(DEBUG_STR)
+# Release directory.
+RELEASE_DIR := $(BUILD_DIR)/$(RELEASE_STR)
 
-# Place to store building files.
-DIR_BUILD = build
-
-# Debug.
-DIR_DEBUG = $(DIR_BUILD)/debug
-
-# Release.
-DIR_RELEASE = $(DIR_BUILD)/release
-
+# Target directory.
+TARGET_DIR = $(BUILD_DIR)/$(TARGET_STR)
 # Object files' directory.
-DIR_OBJ = obj
-
+OBJ_DIR = $(TARGET_DIR)/$(OBJ_STR)
 
 ###############################################################################
 #                                Source files                                 #
 ###############################################################################
 
-INCS := $(wildcard $(DIR_INC)/*.h)
-SRCS := $(wildcard $(DIR_SRC)/*.cpp)
-OBJS :=
+INCS := $(wildcard $(INC_DIR)/*.h)
+SRCS := $(wildcard $(SRC_DIR)/*.cpp)
 
-# Target file.
-TARGET = debug
+OBJS = $(SRCS:$(SRC_DIR)%.cpp=$(OBJ_DIR)%.o)
+TARGET = $(TARGET_DIR)/$(TARGET_STR)
 
 
 ###############################################################################
@@ -45,6 +57,7 @@ TARGET = debug
 
 # Setting flags.
 CXX := $(shell which g++)
+WARNING :=
 CXXFLAGS += -std=c++17
 CPPFLAGS += -MMD -MP
 
@@ -53,19 +66,15 @@ CPPFLAGS += -MMD -MP
 #                                   Options.                                  #
 ###############################################################################
 
-# Build mode as one of [debug=default, release], controls which build.
+# Construct debug or release build.
 RELEASE ?= off
 
-ifeq ($(RELEASE), off)
-	CXXFLAGS += -g
-	DIR_OBJ := $(DIR_DEBUG)/$(DIR_OBJ)
-	TARGET := $(DIR_DEBUG)/debug
-else
+ifeq ($(RELEASE), on)
 	CXXFLAGS += -O3
-	DIR_OBJ := $(DIR_RELEASE)/$(DIR_OBJ)
-	TARGET := $(DIR_RELEASE)/release
+	TARGET_STR = $(RELEASE_STR)
+else
+	CXXFLAGS += -g
 endif
-OBJS := $(SRCS:$(DIR_SRC)%.cpp=$(DIR_OBJ)%.o)
 
 ###############################################################################
 #                           Project building rules.                           #
@@ -79,12 +88,12 @@ $(TARGET): $(OBJS)
 	$(CXX) $(CXXFLAGS) $< -o $@
 
 # Spawn the corresponding .o and .d files for every .cpp file.
-$(DIR_OBJ)/%.o: $(DIR_SRC)/%.cpp
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
 
 # Generating build directories.
 directory:
-	mkdir -p $(DIR_OBJ)
+	mkdir -p $(OBJ_DIR)
 
 -include ${OBJS:.o=.d}
 
@@ -93,13 +102,17 @@ directory:
 #                                Build commands.                              #
 ###############################################################################
 
-.PHONY: debug release clean
+.PHONY: debug release build clean
 
 debug:
 	@$(MAKE)
 
 release:
 	@$(MAKE) RELEASE=on
+
+build:
+	@$(MAKE)
+	@$(MAKE) release
 
 clean:
 	rm -rf build
@@ -127,7 +140,5 @@ bear:
 	bear -- $(MAKE) -j$(nproc) debug
 
 project:
-	mkdir -p $(DIR_SRC) $(DIR_INC)
+	mkdir -p $(SRC_DIR) $(INC_DIR)
 	$(MAKE) Gen-clangFormat
-
-
